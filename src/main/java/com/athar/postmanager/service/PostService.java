@@ -1,45 +1,45 @@
 package com.athar.postmanager.service;
 
+import com.athar.postmanager.exception.ResourceNotFoundException;
 import com.athar.postmanager.model.Post;
+import com.athar.postmanager.repository.PostRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.*;
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.List;
 
 @Service
 public class PostService {
 
-    private final List<Post> posts = new ArrayList<>();
-    private final AtomicLong counter = new AtomicLong(1);
+    @Autowired
+    private PostRepository postRepository;
 
     public List<Post> getAllPosts() {
-        return new ArrayList<>(posts);
+        return postRepository.findAll();
     }
 
     public Post getPostById(Long id) {
-        return posts.stream()
-                .filter(p -> p.getId().equals(id))
-                .findFirst()
-                .orElseThrow(() -> new NoSuchElementException("Post not found"));
+        return postRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Post not found with id " + id));
     }
 
     public Post createPost(Post post) {
         if (post.getTitle() == null || post.getTitle().isEmpty()) {
             throw new IllegalArgumentException("Title cannot be empty");
         }
-        post.setId(counter.getAndIncrement());
-        posts.add(post);
-        return post;
+        return postRepository.save(post);
     }
 
     public Post updatePost(Long id, Post updatedPost) {
         Post existing = getPostById(id);
         existing.setTitle(updatedPost.getTitle());
         existing.setContent(updatedPost.getContent());
-        return existing;
+        return postRepository.save(existing);
     }
 
-    public void deletePost(Long id) {
-        posts.removeIf(p -> p.getId().equals(id));
+    public String deletePost(Long id) {
+        Post existingPost = getPostById(id);
+        postRepository.delete(existingPost);
+        return "Post with ID " + id + " deleted successfully.";
     }
 }

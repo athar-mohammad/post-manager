@@ -1,11 +1,26 @@
 package com.athar.postmanager.model;
 
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+
+@Entity
 public class Post {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
     private String title;
     private String content;
 
-    public Post() {}
+    public Post() {
+    }
+
+    public Post(String title, String content) {
+        this.title = title;
+        this.content = content;
+    }
 
     public Post(Long id, String title, String content) {
         this.id = id;
@@ -13,6 +28,7 @@ public class Post {
         this.content = content;
     }
 
+    // Getters & Setters
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
