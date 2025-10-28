@@ -8,7 +8,6 @@ public class PostManagerApplication {
 
 	public static void main(String[] args) {
 		SpringApplication.run(PostManagerApplication.class, args);
-		System.out.println("Hello");
 	}
 
 }
