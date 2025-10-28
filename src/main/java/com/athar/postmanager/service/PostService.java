@@ -1,9 +1,7 @@
 package com.athar.postmanager.service;
 
-import com.athar.postmanager.exception.ResourceNotFoundException;
 import com.athar.postmanager.model.Post;
 import com.athar.postmanager.repository.PostRepository;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -12,38 +10,80 @@ import java.util.Optional;
 @Service
 public class PostService {
 
-	@Autowired
-	private PostRepository postRepository;
+    private final PostRepository postRepository;
 
-	public List<Post> getAllPosts() {
-		return postRepository.findAll();
-	}
+    public PostService(PostRepository postRepository) {
+        this.postRepository = postRepository;
+    }
 
-	public Post getPostById(Long id) {
-		return postRepository.findById(id)
-				.orElseThrow(() -> new ResourceNotFoundException("Post not found with id " + id));
-	}
+    // Create new post
+    public Post createPost(Post post) {
+        if (post.getTitle() == null || post.getTitle().trim().isEmpty()) {
+            throw new IllegalArgumentException("Title cannot be empty");
+        }
+        if (post.getContent() == null || post.getContent().trim().isEmpty()) {
+            throw new IllegalArgumentException("Content cannot be empty");
+        }
+        return postRepository.save(post);
+    }
 
-	public Post createPost(Post post) {
-		if (post.getTitle() == null || post.getTitle().isEmpty()) {
-			throw new IllegalArgumentException("Title cannot be empty");
-		}
-		return postRepository.save(post);
-	}
+    // Get all posts
+    public List<Post> getAllPosts() {
+        return postRepository.findAll();
+    }
 
-	public Post updatePost(Long id, Post updatedPost) {
-		Post existing = getPostById(id);
-		existing.setTitle(updatedPost.getTitle());
-		existing.setContent(updatedPost.getContent());
-		return postRepository.save(existing);
-	}
+    // Get post by ID
+    public Post getPostById(Long id) {
+        Optional<Post> post = postRepository.findById(id);
+        if (post.isPresent()) {
+            return post.get();
+        } else {
+            throw new IllegalArgumentException("Post not found");
+        }
+    }
 
-	public boolean deletePost(Long id) {
-	    if (postRepository.existsById(id)) {
-	        postRepository.deleteById(id);
-	        return true;
-	    } else {
-	        return false;
-	    }
-	}
+    public Post updatePost(Long id, Post updatedPost) {
+        Optional<Post> existingPostOpt = postRepository.findById(id);
+        if (existingPostOpt.isEmpty()) {
+            throw new IllegalArgumentException("Post not found");
+        }
+
+        Post existingPost = existingPostOpt.get();
+
+        // Validate new content
+        if (updatedPost.getTitle() == null || updatedPost.getTitle().trim().isEmpty()) {
+            throw new IllegalArgumentException("Title cannot be empty");
+        }
+        if (updatedPost.getContent() == null || updatedPost.getContent().trim().isEmpty()) {
+            throw new IllegalArgumentException("Content cannot be empty");
+        }
+
+        // 🔍 Check if nothing changed
+        boolean noChange =
+                existingPost.getTitle().equals(updatedPost.getTitle()) &&
+                existingPost.getContent().equals(updatedPost.getContent());
+
+        if (noChange) {
+            throw new IllegalArgumentException("No changes detected to update");
+        }
+
+        existingPost.setTitle(updatedPost.getTitle());
+        existingPost.setContent(updatedPost.getContent());
+
+        return postRepository.save(existingPost);
+    }
+
+    // Delete post (returns true if deleted)
+    public boolean deletePost(Long id) {
+        if (id == null || id <= 0) {
+            throw new IllegalArgumentException("Invalid post ID");
+        }
+
+        Optional<Post> existingPost = postRepository.findById(id);
+        if (existingPost.isPresent()) {
+            postRepository.delete(existingPost.get());
+            return true;
+        }
+        return false;
+    }
 }
