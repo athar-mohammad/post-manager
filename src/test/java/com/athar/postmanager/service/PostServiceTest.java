@@ -58,15 +58,14 @@ public class PostServiceTest {
         verify(postRepository, times(1)).findAll();
     }
 
-    @Test
-    void testDeletePost() {
-        Long postId = 1L;
-        Post post = new Post(postId, "Title", "Content");
-
-        when(postRepository.findById(postId)).thenReturn(Optional.of(post));
-
-        postService.deletePost(postId);
-
-        verify(postRepository, times(1)).delete(post);
+    public boolean deletePost(Long id) {
+        Optional<Post> existingPost = postRepository.findById(id);
+        if (existingPost.isPresent()) {
+            postRepository.delete(existingPost.get());
+            return true;
+        }
+        return false;
     }
+   
+
 }

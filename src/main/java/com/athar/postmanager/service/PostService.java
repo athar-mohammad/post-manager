@@ -39,9 +39,8 @@ public class PostService {
 	}
 
 	public boolean deletePost(Long id) {
-	    Optional<Post> existingPost = postRepository.findById(id);
-	    if (existingPost.isPresent()) {
-	        postRepository.delete(existingPost.get());
+	    if (postRepository.existsById(id)) {
+	        postRepository.deleteById(id);
 	        return true;
 	    } else {
 	        return false;
