@@ -42,7 +42,6 @@ public class PostService {
         }
     }
 
-    // Update post
     public Post updatePost(Long id, Post updatedPost) {
         Optional<Post> existingPostOpt = postRepository.findById(id);
         if (existingPostOpt.isEmpty()) {
@@ -51,6 +50,7 @@ public class PostService {
 
         Post existingPost = existingPostOpt.get();
 
+        // Validate new content
         if (updatedPost.getTitle() == null || updatedPost.getTitle().trim().isEmpty()) {
             throw new IllegalArgumentException("Title cannot be empty");
         }
@@ -58,8 +58,10 @@ public class PostService {
             throw new IllegalArgumentException("Content cannot be empty");
         }
 
-        boolean noChange = existingPost.getTitle().equals(updatedPost.getTitle())
-                && existingPost.getContent().equals(updatedPost.getContent());
+        // 🔍 Check if nothing changed
+        boolean noChange =
+                existingPost.getTitle().equals(updatedPost.getTitle()) &&
+                existingPost.getContent().equals(updatedPost.getContent());
 
         if (noChange) {
             throw new IllegalArgumentException("No changes detected to update");
@@ -67,10 +69,11 @@ public class PostService {
 
         existingPost.setTitle(updatedPost.getTitle());
         existingPost.setContent(updatedPost.getContent());
+
         return postRepository.save(existingPost);
     }
 
-    // Delete post
+    // Delete post (returns true if deleted)
     public boolean deletePost(Long id) {
         if (id == null || id <= 0) {
             throw new IllegalArgumentException("Invalid post ID");
@@ -82,26 +85,5 @@ public class PostService {
             return true;
         }
         return false;
-    }
-
-    // New Feature: Like a post
-    public Post likePost(Long id) {
-        Post post = getPostById(id);
-        post.setLikes(post.getLikes() + 1);
-        return postRepository.save(post);
-    }
-
-    // New Feature: Unlike a post
-    public Post unlikePost(Long id) {
-        Post post = getPostById(id);
-        if (post.getLikes() > 0) {
-            post.setLikes(post.getLikes() - 1);
-        }
-        return postRepository.save(post);
-    }
-
-    // New Feature: Get top liked posts
-    public List<Post> getTopLikedPosts() {
-        return postRepository.findTopLikedPosts();
     }
 }
