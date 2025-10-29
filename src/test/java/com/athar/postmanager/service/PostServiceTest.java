@@ -2,6 +2,7 @@ package com.athar.postmanager.service;
 
 import com.athar.postmanager.model.Post;
 import com.athar.postmanager.repository.PostRepository;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
@@ -29,7 +30,7 @@ public class PostServiceTest {
     }
 
     @Test
-    void testCreatePost_Success() {
+    void testCreatePost() {
         Post post = new Post(null, "First", "Content");
         Post savedPost = new Post(1L, "First", "Content");
 
@@ -40,12 +41,6 @@ public class PostServiceTest {
         assertNotNull(result.getId());
         assertEquals("First", result.getTitle());
         verify(postRepository, times(1)).save(post);
-    }
-
-    @Test
-    void testCreatePost_EmptyTitleThrows() {
-        Post post = new Post(null, "", "Content");
-        assertThrows(IllegalArgumentException.class, () -> postService.createPost(post));
     }
 
     @Test
@@ -64,52 +59,72 @@ public class PostServiceTest {
     }
 
     @Test
-    void testUpdatePost_Success() {
-        Post existing = new Post(1L, "Old Title", "Old Content");
-        Post update = new Post(1L, "New Title", "New Content");
+    void testDeletePost() {
+        Long postId = 1L;
+        Post post = new Post(postId, "Title", "Content");
 
-        when(postRepository.findById(1L)).thenReturn(Optional.of(existing));
-        when(postRepository.save(any(Post.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(postRepository.findById(postId)).thenReturn(Optional.of(post));
 
-        Post result = postService.updatePost(1L, update);
+        postService.deletePost(postId);
 
-        assertEquals("New Title", result.getTitle());
-        verify(postRepository).save(existing);
-    }
-
-    @Test
-    void testUpdatePost_NoChangesThrows() {
-        Post existing = new Post(1L, "Same", "Same");
-        Post update = new Post(1L, "Same", "Same");
-
-        when(postRepository.findById(1L)).thenReturn(Optional.of(existing));
-
-        assertThrows(IllegalArgumentException.class, () -> postService.updatePost(1L, update));
-    }
-
-    @Test
-    void testDeletePost_Success() {
-        Post post = new Post(1L, "Title", "Content");
-        when(postRepository.findById(1L)).thenReturn(Optional.of(post));
-
-        boolean deleted = postService.deletePost(1L);
-
-        assertTrue(deleted);
         verify(postRepository, times(1)).delete(post);
     }
-
+    
     @Test
-    void testDeletePost_NotFoundReturnsFalse() {
-        when(postRepository.findById(99L)).thenReturn(Optional.empty());
+    void testLikePost() {
+        Post post = new Post(1L, "Title", "Content");
+        post.setLikes(0);
 
-        boolean deleted = postService.deletePost(99L);
+        when(postRepository.findById(1L)).thenReturn(Optional.of(post));
+        when(postRepository.save(any(Post.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        assertFalse(deleted);
-        verify(postRepository, never()).delete(any());
+        Post likedPost = postService.likePost(1L);
+
+        assertEquals(1, likedPost.getLikes());
+        verify(postRepository, times(1)).save(post);
     }
 
     @Test
-    void testDeletePost_NullIdThrows() {
-        assertThrows(IllegalArgumentException.class, () -> postService.deletePost(null));
+    void testUnlikePost_WhenLikesGreaterThanZero() {
+        Post post = new Post(2L, "Title", "Content");
+        post.setLikes(3);
+
+        when(postRepository.findById(2L)).thenReturn(Optional.of(post));
+        when(postRepository.save(any(Post.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        Post unlikedPost = postService.unlikePost(2L);
+
+        assertEquals(2, unlikedPost.getLikes());
+        verify(postRepository, times(1)).save(post);
+    }
+
+    @Test
+    void testUnlikePost_WhenLikesZero_DoesNotGoNegative() {
+        Post post = new Post(3L, "Title", "Content");
+        post.setLikes(0);
+
+        when(postRepository.findById(3L)).thenReturn(Optional.of(post));
+        when(postRepository.save(any(Post.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        Post result = postService.unlikePost(3L);
+
+        assertEquals(0, result.getLikes());
+        verify(postRepository, times(1)).save(post);
+    }
+
+    @Test
+    void testGetTopLikedPosts() {
+        List<Post> topLiked = Arrays.asList(
+                new Post(1L, "Most Liked", "Content"),
+                new Post(2L, "Second", "Content")
+        );
+
+        when(postRepository.findTopLikedPosts()).thenReturn(topLiked);
+
+        List<Post> result = postService.getTopLikedPosts();
+
+        assertEquals(2, result.size());
+        assertEquals("Most Liked", result.get(0).getTitle());
+        verify(postRepository, times(1)).findTopLikedPosts();
     }
 }

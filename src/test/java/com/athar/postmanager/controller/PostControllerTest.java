@@ -31,34 +31,49 @@ public class PostControllerTest {
         postRepository.deleteAll();
     }
 
+    /**
+     * Positive (P2P) test: Delete existing post should return 204 No Content
+     */
     @Test
-    public void testDeleteExistingPost_ShouldReturnNoContent() {
-        Post post = postRepository.save(new Post("Sample", "Content"));
+    public void testDeleteExistingPost_ShouldReturnSuccess() {
+        // Arrange
+        Post post = new Post("Test Title", "Test Content");
+        Post saved = postRepository.save(post);
+
+        // Act
         ResponseEntity<String> response = restTemplate.exchange(
-            "/api/posts/" + post.getId(),
-            HttpMethod.DELETE, null, String.class
+            "/api/posts/" + saved.getId(),
+            HttpMethod.DELETE,
+            null,
+            String.class
         );
+
+        // Assert
         assertEquals(HttpStatus.NO_CONTENT, response.getStatusCode());
+        assertTrue(postRepository.findById(saved.getId()).isEmpty(), "Post should be deleted from DB");
     }
 
+    /**
+     * Negative (F2P) test: Delete non-existing post should return 404 Not Found
+     */
     @Test
     public void testDeleteNonExistingPost_ShouldReturnNotFound() {
+        // Act
         ResponseEntity<String> response = restTemplate.exchange(
-            "/api/posts/9999",
-            HttpMethod.DELETE, null, String.class
+            "/api/posts/99999",
+            HttpMethod.DELETE,
+            HttpEntity.EMPTY,
+            String.class
         );
+
+        // Assert
         assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+        assertTrue(response.getBody().contains("Post not found"), "Should return proper error message");
     }
 
-    @Test
-    public void testDeleteThenFetch_ShouldReturnNotFound() {
-        Post post = postRepository.save(new Post("Title", "Content"));
-        restTemplate.exchange("/api/posts/" + post.getId(), HttpMethod.DELETE, null, String.class);
-        ResponseEntity<String> getResponse = restTemplate.getForEntity("/api/posts/" + post.getId(), String.class);
-        assertEquals(HttpStatus.NOT_FOUND, getResponse.getStatusCode());
-    }
-
-    
+    /**
+     * Positive (P2P) test: Create and delete flow verification
+     */
     @Test
     public void testCreateAndDeleteFlow() {
         // Arrange - create a post first

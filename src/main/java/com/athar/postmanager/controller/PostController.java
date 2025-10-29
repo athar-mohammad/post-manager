@@ -2,6 +2,7 @@ package com.athar.postmanager.controller;
 
 import com.athar.postmanager.model.Post;
 import com.athar.postmanager.service.PostService;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -18,76 +19,49 @@ public class PostController {
         this.postService = postService;
     }
 
-    // Get all posts
     @GetMapping
-    public ResponseEntity<List<Post>> getAllPosts() {
-        List<Post> posts = postService.getAllPosts();
-        if (posts.isEmpty()) {
-            return ResponseEntity.noContent().build();
-        }
-        return ResponseEntity.ok(posts);
+    public List<Post> getAllPosts() {
+        return postService.getAllPosts();
     }
 
-    // Get post by ID
     @GetMapping("/{id}")
-    public ResponseEntity<?> getPostById(@PathVariable Long id) {
-        if (id == null || id <= 0) {
-            return ResponseEntity.badRequest().body("Invalid post ID");
-        }
-
+    public ResponseEntity<Post> getPostById(@PathVariable Long id) {
         try {
-            Post post = postService.getPostById(id);
-            return ResponseEntity.ok(post);
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Post not found");
+            return ResponseEntity.ok(postService.getPostById(id));
+        } catch (Exception e) {
+            return ResponseEntity.notFound().build();
         }
     }
 
-    // Create new post
     @PostMapping
-    public ResponseEntity<?> createPost(@RequestBody Post post) {
-        if (post.getTitle() == null || post.getTitle().trim().isEmpty()) {
-            return ResponseEntity.badRequest().body("Title cannot be empty");
-        }
-        if (post.getContent() == null || post.getContent().trim().isEmpty()) {
-            return ResponseEntity.badRequest().body("Content cannot be empty");
-        }
-
+    public ResponseEntity<Post> createPost(@RequestBody Post post) {
         try {
             Post createdPost = postService.createPost(post);
             return ResponseEntity.status(HttpStatus.CREATED).body(createdPost);
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
+            return ResponseEntity.badRequest().build();
         }
     }
-
-    // Update post
+    
     @PutMapping("/{id}")
     public ResponseEntity<?> updatePost(@PathVariable Long id, @RequestBody Post post) {
-        if (id == null || id <= 0) {
-            return ResponseEntity.badRequest().body("Invalid post ID");
-        }
         if (post.getTitle() == null || post.getTitle().trim().isEmpty() ||
             post.getContent() == null || post.getContent().trim().isEmpty()) {
             return ResponseEntity.badRequest().body("Title and content cannot be empty");
         }
 
-        try {
-            Post updatedPost = postService.updatePost(id, post);
+        Post updatedPost = postService.updatePost(id, post);
+        if (updatedPost != null) {
             return ResponseEntity.ok(updatedPost);
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+        } else {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Post not found");
         }
     }
 
-    // Delete post
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deletePost(@PathVariable Long id) {
-        if (id == null || id <= 0) {
-            return ResponseEntity.badRequest().body("Invalid post ID");
-        }
-
         boolean deleted = postService.deletePost(id);
+
         if (deleted) {
             return ResponseEntity.noContent().build();
         } else {
