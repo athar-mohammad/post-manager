@@ -69,4 +69,62 @@ public class PostServiceTest {
 
         verify(postRepository, times(1)).delete(post);
     }
+    
+    @Test
+    void testLikePost() {
+        Post post = new Post(1L, "Title", "Content");
+        post.setLikes(0);
+
+        when(postRepository.findById(1L)).thenReturn(Optional.of(post));
+        when(postRepository.save(any(Post.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        Post likedPost = postService.likePost(1L);
+
+        assertEquals(1, likedPost.getLikes());
+        verify(postRepository, times(1)).save(post);
+    }
+
+    @Test
+    void testUnlikePost_WhenLikesGreaterThanZero() {
+        Post post = new Post(2L, "Title", "Content");
+        post.setLikes(3);
+
+        when(postRepository.findById(2L)).thenReturn(Optional.of(post));
+        when(postRepository.save(any(Post.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        Post unlikedPost = postService.unlikePost(2L);
+
+        assertEquals(2, unlikedPost.getLikes());
+        verify(postRepository, times(1)).save(post);
+    }
+
+    @Test
+    void testUnlikePost_WhenLikesZero_DoesNotGoNegative() {
+        Post post = new Post(3L, "Title", "Content");
+        post.setLikes(0);
+
+        when(postRepository.findById(3L)).thenReturn(Optional.of(post));
+        when(postRepository.save(any(Post.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        Post result = postService.unlikePost(3L);
+
+        assertEquals(0, result.getLikes());
+        verify(postRepository, times(1)).save(post);
+    }
+
+    @Test
+    void testGetTopLikedPosts() {
+        List<Post> topLiked = Arrays.asList(
+                new Post(1L, "Most Liked", "Content"),
+                new Post(2L, "Second", "Content")
+        );
+
+        when(postRepository.findTopLikedPosts()).thenReturn(topLiked);
+
+        List<Post> result = postService.getTopLikedPosts();
+
+        assertEquals(2, result.size());
+        assertEquals("Most Liked", result.get(0).getTitle());
+        verify(postRepository, times(1)).findTopLikedPosts();
+    }
 }
