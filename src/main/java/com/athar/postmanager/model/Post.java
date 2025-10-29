@@ -13,6 +13,7 @@ public class Post {
 
     private String title;
     private String content;
+    private int likes = 0;
 
     public Post() {
     }
@@ -37,4 +38,22 @@ public class Post {
 
     public String getContent() { return content; }
     public void setContent(String content) { this.content = content; }
+    
+    public int getLikes() { 
+        return likes; 
+    }
+    public void setLikes(int likes) { 
+        this.likes = likes; 
+    }
+
+    
+    public void incrementLikes() {
+        this.likes++;
+    }
+
+    public void decrementLikes() {
+        if (this.likes > 0) {
+            this.likes--;
+        }
+    }
 }
