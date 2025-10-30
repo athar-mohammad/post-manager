@@ -2,6 +2,9 @@ package com.athar.postmanager.service;
 
 import com.athar.postmanager.model.Comment;
 import com.athar.postmanager.repository.CommentRepository;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -26,10 +29,11 @@ public class CommentService {
         return commentRepository.save(comment);
     }
 
-    public List<Comment> getCommentsByPost(Long postId) {
-        return commentRepository.findByPostId(postId);
+    public List<Comment> getCommentsByPost(Long postId, int page, int size) {
+        PageRequest pageRequest = PageRequest.of(page, size);
+        return commentRepository.findByPostIdOrderByCreatedAtDesc(postId, pageRequest).getContent();
     }
-
+    
     public boolean deleteComment(Long id) {
         Optional<Comment> existing = commentRepository.findById(id);
         if (existing.isPresent()) {

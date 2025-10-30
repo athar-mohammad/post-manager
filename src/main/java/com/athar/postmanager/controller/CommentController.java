@@ -2,6 +2,8 @@ package com.athar.postmanager.controller;
 
 import com.athar.postmanager.model.Comment;
 import com.athar.postmanager.service.CommentService;
+
+import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -29,12 +31,14 @@ public class CommentController {
     }
 
     // Get all comments for a post
-    @GetMapping("/post/{postId}")
-    public ResponseEntity<List<Comment>> getCommentsByPost(@PathVariable Long postId) {
-        List<Comment> comments = commentService.getCommentsByPost(postId);
-        return ResponseEntity.ok(comments);
+    @GetMapping
+    public ResponseEntity<List<Comment>> getCommentsByPost(
+            @RequestParam Long postId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "5") int size) {
+        return ResponseEntity.ok(commentService.getCommentsByPost(postId, page, size));
     }
-
+    
     // Delete a comment
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteComment(@PathVariable Long id) {
