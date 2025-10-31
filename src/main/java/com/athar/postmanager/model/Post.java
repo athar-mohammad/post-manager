@@ -21,16 +21,25 @@ public class Post {
     @NotBlank(message = "Content cannot be blank")
     private String content;
 
-    private int likes = 0;
+    private Integer likes;        // Nullable safe type
+    private Boolean deleted;      // Nullable safe type
+
+    @Version
+    private Long version;
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
-    // Relation with Comment entity
+    // Relationship with Comment
     @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Comment> comments = new ArrayList<>();
 
+    // ------------------------------------------------------
+    // CONSTRUCTORS
+    // ------------------------------------------------------
     public Post() {
+        this.likes = 0;
+        this.deleted = false;
         this.createdAt = LocalDateTime.now();
         this.updatedAt = LocalDateTime.now();
     }
@@ -38,6 +47,8 @@ public class Post {
     public Post(String title, String content) {
         this.title = title;
         this.content = content;
+        this.likes = 0;
+        this.deleted = false;
         this.createdAt = LocalDateTime.now();
         this.updatedAt = LocalDateTime.now();
     }
@@ -46,26 +57,38 @@ public class Post {
         this.id = id;
         this.title = title;
         this.content = content;
+        this.likes = 0;
+        this.deleted = false;
         this.createdAt = LocalDateTime.now();
         this.updatedAt = LocalDateTime.now();
     }
 
-    // --- Utility Methods ---
+    // ------------------------------------------------------
+    // LIFECYCLE METHODS
+    // ------------------------------------------------------
     @PreUpdate
     public void onUpdate() {
         this.updatedAt = LocalDateTime.now();
     }
 
-    public void incrementLikes() {
+    // ------------------------------------------------------
+    // LIKE / UNLIKE UTILITIES (safe null handling)
+    // ------------------------------------------------------
+    public synchronized void incrementLikes() {
+        if (this.likes == null) this.likes = 0;
         this.likes++;
     }
 
-    public void decrementLikes() {
+    public synchronized void decrementLikes() {
+        if (this.likes == null) this.likes = 0;
         if (this.likes > 0) {
             this.likes--;
         }
     }
 
+    // ------------------------------------------------------
+    // COMMENT MANAGEMENT
+    // ------------------------------------------------------
     public void addComment(Comment comment) {
         comments.add(comment);
         comment.setPost(this);
@@ -76,24 +99,43 @@ public class Post {
         comment.setPost(null);
     }
 
-    // --- Getters & Setters ---
+    // ------------------------------------------------------
+    // SOFT DELETE UTILITIES
+    // ------------------------------------------------------
+    public void markDeleted() {
+        this.deleted = true;
+    }
+
+    public boolean isActive() {
+        return !Boolean.TRUE.equals(deleted);
+    }
+
+    // ------------------------------------------------------
+    // GETTERS & SETTERS (nullable-safe types)
+    // ------------------------------------------------------
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
     public String getTitle() { return title; }
-    public void setTitle(String title) { 
+    public void setTitle(String title) {
         this.title = title;
         this.updatedAt = LocalDateTime.now();
     }
 
     public String getContent() { return content; }
-    public void setContent(String content) { 
+    public void setContent(String content) {
         this.content = content;
         this.updatedAt = LocalDateTime.now();
     }
 
-    public int getLikes() { return likes; }
-    public void setLikes(int likes) { this.likes = likes; }
+    public Integer getLikes() { return likes; }
+    public void setLikes(Integer likes) { this.likes = likes; }
+
+    public Boolean isDeleted() { return deleted; }
+    public void setDeleted(Boolean deleted) { this.deleted = deleted; }
+
+    public Long getVersion() { return version; }
+    public void setVersion(Long version) { this.version = version; }
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }

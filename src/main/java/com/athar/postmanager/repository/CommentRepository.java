@@ -19,4 +19,6 @@ public interface CommentRepository extends JpaRepository<Comment, Long> {
 
     // Delete all comments belonging to a specific post
     void deleteByPost(Post post);
+    
+    void deleteAllByPostIsNull();
 }

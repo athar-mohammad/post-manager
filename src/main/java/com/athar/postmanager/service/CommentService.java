@@ -7,6 +7,7 @@ import com.athar.postmanager.repository.PostRepository;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -47,5 +48,10 @@ public class CommentService {
             return true;
         }
         return false;
+    }
+    
+    @Scheduled(cron = "0 0 * * * *")
+    public void cleanOrphanComments() {
+        commentRepository.deleteAllByPostIsNull();
     }
 }
