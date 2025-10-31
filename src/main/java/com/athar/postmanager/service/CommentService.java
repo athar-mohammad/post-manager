@@ -1,7 +1,9 @@
 package com.athar.postmanager.service;
 
 import com.athar.postmanager.model.Comment;
+import com.athar.postmanager.model.Post;
 import com.athar.postmanager.repository.CommentRepository;
+import com.athar.postmanager.repository.PostRepository;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -14,9 +16,11 @@ import java.util.Optional;
 public class CommentService {
 
     private final CommentRepository commentRepository;
+    private final PostRepository postRepository;
 
-    public CommentService(CommentRepository commentRepository) {
+    public CommentService(CommentRepository commentRepository, PostRepository postRepository) {
         this.commentRepository = commentRepository;
+        this.postRepository = postRepository;
     }
 
     public Comment addComment(Comment comment) {
@@ -30,8 +34,10 @@ public class CommentService {
     }
 
     public List<Comment> getCommentsByPost(Long postId, int page, int size) {
-        PageRequest pageRequest = PageRequest.of(page, size);
-        return commentRepository.findByPostIdOrderByCreatedAtDesc(postId, pageRequest).getContent();
+        Post post = postRepository.findById(postId)
+                .orElseThrow(() -> new IllegalArgumentException("Post not found"));
+        return commentRepository.findByPostOrderByCreatedAtDesc(post, PageRequest.of(page, size))
+                .getContent();
     }
     
     public boolean deleteComment(Long id) {

@@ -1,7 +1,9 @@
 package com.athar.postmanager.service;
 
 import com.athar.postmanager.model.Comment;
+import com.athar.postmanager.model.Post;
 import com.athar.postmanager.repository.CommentRepository;
+import com.athar.postmanager.repository.PostRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
@@ -23,19 +25,25 @@ public class CommentServiceTest {
     @Mock
     private CommentRepository commentRepository;
 
+    @Mock
+    private PostRepository postRepository; // ✅ Added mock
+
     @InjectMocks
     private CommentService commentService;
+
+    private Post mockPost;
 
     @BeforeEach
     void setup() {
         MockitoAnnotations.openMocks(this);
+        mockPost = new Post(1L, "Hello", "World");
     }
 
-    // ✅ Test: Adding a comment successfully
     @Test
     void testAddComment_Success() {
-        Comment comment = new Comment(null, 1L, "Athar", "Nice post!");
-        when(commentRepository.save(comment)).thenReturn(new Comment(1L, 1L, "Athar", "Nice post!"));
+        Comment comment = new Comment(null, mockPost, "Athar", "Nice post!");
+        when(commentRepository.save(comment))
+                .thenReturn(new Comment(1L, mockPost, "Athar", "Nice post!"));
 
         Comment saved = commentService.addComment(comment);
 
@@ -43,34 +51,34 @@ public class CommentServiceTest {
         verify(commentRepository).save(comment);
     }
 
-    // ✅ Test: Adding an invalid (empty) comment throws exception
     @Test
     void testAddComment_EmptyContentThrows() {
-        Comment comment = new Comment(null, 1L, "Athar", "");
+        Comment comment = new Comment(null, mockPost, "Athar", "");
         assertThrows(IllegalArgumentException.class, () -> commentService.addComment(comment));
     }
 
-    // ✅ Test: Fetching comments by post (with pagination)
     @Test
     void testGetCommentsByPost_Paginated() {
+        when(postRepository.findById(mockPost.getId())).thenReturn(Optional.of(mockPost)); // ✅ Added
+
         List<Comment> mockComments = Arrays.asList(
-                new Comment(1L, 1L, "User1", "Nice!"),
-                new Comment(2L, 1L, "User2", "Wow!")
+                new Comment(1L, mockPost, "User1", "Nice!"),
+                new Comment(2L, mockPost, "User2", "Wow!")
         );
 
         Page<Comment> mockPage = new PageImpl<>(mockComments);
-        when(commentRepository.findByPostIdOrderByCreatedAtDesc(1L, PageRequest.of(0, 5)))
+        when(commentRepository.findByPostOrderByCreatedAtDesc(eq(mockPost), any(PageRequest.class)))
                 .thenReturn(mockPage);
 
-        List<Comment> result = commentService.getCommentsByPost(1L, 0, 5);
+        List<Comment> result = commentService.getCommentsByPost(mockPost.getId(), 0, 5);
+
         assertEquals(2, result.size());
-        verify(commentRepository).findByPostIdOrderByCreatedAtDesc(1L, PageRequest.of(0, 5));
+        verify(commentRepository).findByPostOrderByCreatedAtDesc(eq(mockPost), any(PageRequest.class));
     }
 
-    // ✅ Test: Deleting a comment successfully
     @Test
     void testDeleteComment_Success() {
-        Comment comment = new Comment(1L, 1L, "A", "Hi");
+        Comment comment = new Comment(1L, mockPost, "A", "Hi");
         when(commentRepository.findById(1L)).thenReturn(Optional.of(comment));
 
         boolean deleted = commentService.deleteComment(1L);
@@ -79,7 +87,6 @@ public class CommentServiceTest {
         verify(commentRepository).delete(comment);
     }
 
-    // ✅ Test: Deleting a non-existent comment returns false
     @Test
     void testDeleteComment_NotFound() {
         when(commentRepository.findById(99L)).thenReturn(Optional.empty());
