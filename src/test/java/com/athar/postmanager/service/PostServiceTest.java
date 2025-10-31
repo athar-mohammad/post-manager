@@ -1,6 +1,8 @@
 package com.athar.postmanager.service;
 
+import com.athar.postmanager.model.Comment;
 import com.athar.postmanager.model.Post;
+import com.athar.postmanager.repository.CommentRepository;
 import com.athar.postmanager.repository.PostRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -9,6 +11,7 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -20,14 +23,23 @@ public class PostServiceTest {
     @Mock
     private PostRepository postRepository;
 
+    @Mock
+    private CommentRepository commentRepository;
+
     @InjectMocks
     private PostService postService;
+
+    private Post mockPost;
 
     @BeforeEach
     void setup() {
         MockitoAnnotations.openMocks(this);
+        mockPost = new Post(1L, "Title", "Content");
     }
 
+    // --------------------------------------------------------------------
+    // Create Post Tests
+    // --------------------------------------------------------------------
     @Test
     void testCreatePost_Success() {
         Post post = new Post(null, "First", "Content");
@@ -48,6 +60,9 @@ public class PostServiceTest {
         assertThrows(IllegalArgumentException.class, () -> postService.createPost(post));
     }
 
+    // --------------------------------------------------------------------
+    // Get All Posts
+    // --------------------------------------------------------------------
     @Test
     void testGetAllPosts() {
         List<Post> mockPosts = Arrays.asList(
@@ -63,6 +78,9 @@ public class PostServiceTest {
         verify(postRepository, times(1)).findAll();
     }
 
+    // --------------------------------------------------------------------
+    // Update Post
+    // --------------------------------------------------------------------
     @Test
     void testUpdatePost_Success() {
         Post existing = new Post(1L, "Old Title", "Old Content");
@@ -87,18 +105,58 @@ public class PostServiceTest {
         assertThrows(IllegalArgumentException.class, () -> postService.updatePost(1L, update));
     }
 
+    // --------------------------------------------------------------------
+    // Delete Post + Comment Cleanup Tests
+    // --------------------------------------------------------------------
     @Test
-    void testDeletePost_Success() {
+    void testDeletePost_WithComments_Success() {
         Post post = new Post(1L, "Title", "Content");
+        List<Comment> comments = Arrays.asList(
+                new Comment(1L, post, "A", "C1"),
+                new Comment(2L, post, "B", "C2")
+        );
+
         when(postRepository.findById(1L)).thenReturn(Optional.of(post));
+        when(commentRepository.findByPost(post)).thenReturn(comments);
 
         boolean deleted = postService.deletePost(1L);
 
         assertTrue(deleted);
+        verify(commentRepository, times(1)).findByPost(post);
+        verify(commentRepository, times(1)).deleteAll(comments);
         verify(postRepository, times(1)).delete(post);
     }
 
-    
+    @Test
+    void testDeletePost_NoComments_Success() {
+        Post post = new Post(2L, "T", "C");
+        when(postRepository.findById(2L)).thenReturn(Optional.of(post));
+        when(commentRepository.findByPost(post)).thenReturn(Collections.emptyList());
+
+        boolean deleted = postService.deletePost(2L);
+
+        assertTrue(deleted);
+        verify(commentRepository, times(1)).findByPost(post);
+        verify(commentRepository, never()).deleteAll(anyList());
+        verify(postRepository, times(1)).delete(post);
+    }
+
+    @Test
+    void testDeletePost_InvalidIdThrows() {
+        assertThrows(IllegalArgumentException.class, () -> postService.deletePost(null));
+    }
+
+    @Test
+    void testDeletePost_PostNotFound_ReturnsFalse() {
+        when(postRepository.findById(99L)).thenReturn(Optional.empty());
+        boolean result = postService.deletePost(99L);
+        assertFalse(result);
+        verify(postRepository, times(1)).findById(99L);
+    }
+
+    // --------------------------------------------------------------------
+    // Like/Unlike Post Tests
+    // --------------------------------------------------------------------
     @Test
     void testLikePost() {
         Post post = new Post(1L, "Title", "Content");
@@ -141,6 +199,9 @@ public class PostServiceTest {
         verify(postRepository, times(1)).save(post);
     }
 
+    // --------------------------------------------------------------------
+    // Top Liked Posts
+    // --------------------------------------------------------------------
     @Test
     void testGetTopLikedPosts() {
         List<Post> topLiked = Arrays.asList(
@@ -155,5 +216,23 @@ public class PostServiceTest {
         assertEquals(2, result.size());
         assertEquals("Most Liked", result.get(0).getTitle());
         verify(postRepository, times(1)).findTopLikedPosts();
+    }
+
+    // --------------------------------------------------------------------
+    // F2P Test: Failure during Comment Deletion rolls back post delete
+    // --------------------------------------------------------------------
+    @Test
+    void testDeletePost_CommentDeletionFails_ShouldRollback() {
+        Post post = new Post(5L, "Rollback", "Test");
+        List<Comment> comments = Arrays.asList(new Comment(10L, post, "A", "Bad"));
+
+        when(postRepository.findById(5L)).thenReturn(Optional.of(post));
+        when(commentRepository.findByPost(post)).thenReturn(comments);
+        doThrow(new RuntimeException("DB failure")).when(commentRepository).deleteAll(comments);
+
+        assertThrows(RuntimeException.class, () -> postService.deletePost(5L));
+
+        // ensure post is NOT deleted due to rollback
+        verify(postRepository, never()).delete(post);
     }
 }
