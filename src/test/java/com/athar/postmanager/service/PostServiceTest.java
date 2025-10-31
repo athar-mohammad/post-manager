@@ -235,4 +235,52 @@ public class PostServiceTest {
         // ensure post is NOT deleted due to rollback
         verify(postRepository, never()).delete(post);
     }
+    
+    
+    @Test
+    void testLikePost_PostNotFound_ThrowsException() {
+        when(postRepository.findById(100L)).thenReturn(Optional.empty());
+
+        assertThrows(IllegalArgumentException.class, () -> postService.likePost(100L));
+        verify(postRepository, times(1)).findById(100L);
+        verify(postRepository, never()).save(any());
+    }
+
+    @Test
+    void testUnlikePost_PostNotFound_ThrowsException() {
+        when(postRepository.findById(200L)).thenReturn(Optional.empty());
+
+        assertThrows(IllegalArgumentException.class, () -> postService.unlikePost(200L));
+        verify(postRepository, times(1)).findById(200L);
+        verify(postRepository, never()).save(any());
+    }
+
+    @Test
+    void testDeletePost_WhenCommentListIsNull_ShouldHandleGracefully() {
+        Post post = new Post(7L, "Null Comment Case", "Content");
+        when(postRepository.findById(7L)).thenReturn(Optional.of(post));
+        when(commentRepository.findByPost(post)).thenReturn(null); // simulate null instead of empty list
+
+        boolean deleted = postService.deletePost(7L);
+
+        assertTrue(deleted);
+        verify(commentRepository, times(1)).findByPost(post);
+        verify(postRepository, times(1)).delete(post);
+    }
+
+    @Test
+    void testLikeAndUnlike_SequenceFlow() {
+        Post post = new Post(8L, "Seq", "Flow");
+        post.setLikes(0);
+
+        when(postRepository.findById(8L)).thenReturn(Optional.of(post));
+        when(postRepository.save(any(Post.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        postService.likePost(8L);
+        postService.likePost(8L);
+        postService.unlikePost(8L);
+
+        assertEquals(1, post.getLikes()); // 0 -> 1 -> 2 -> 1
+        verify(postRepository, atLeast(3)).save(post);
+    }
 }
